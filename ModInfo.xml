@@ -1,0 +1,7 @@
+<mod displayName="SporeFixOnline" 
+	unique="SporeFixOnline" 
+	description="This is a Spore mod which allows connecting to the servers again" 
+	installerSystemVersion="1.0.1.1" 
+	dllsBuild="2.5.20">
+	<prerequisite>SporeFixOnline.dll</prerequisite>
+</mod>
