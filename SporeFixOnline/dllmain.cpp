@@ -33,6 +33,18 @@ static void DisplayError(const char* fmt, ...)
 // Detoured Functions
 //
 
+static_detour(SSL_CTX_set_verify, void(void*, int, void*))
+{
+    void detoured(void* ssl, int mode, void* callback)
+    {
+        // force SSL_VERIFY_NONE to disable verifying CA chain,
+        // this isn't that insecure because we force a hash match
+        // in NetSSLVerifyConnection anyways
+        // TODO: figure out how Spore sets the CA certificates
+        return original_function(ssl, 0x00, callback);
+    }
+};
+
 static_detour(NetSSLVerifyConnection, int(void*, char*)) {
     int detoured(void* ssl, char* servername)
     {
@@ -42,7 +54,6 @@ static_detour(NetSSLVerifyConnection, int(void*, char*)) {
 
         // win32 crypt variables
         PCCERT_CONTEXT cert_ctx = nullptr;
-        PCCERT_CHAIN_CONTEXT chain_ctx = nullptr;
 
         bool ret = false;
 
@@ -117,20 +128,24 @@ static_detour(NetSSLVerifyConnection, int(void*, char*)) {
             }
         }
 
+        if (!ret)
+        {
+            App::ConsolePrintF("SporeFixOnline: certificate hash NOT matched!");
+            for (int i = 0; i < 20; i += 4)
+            {
+                App::ConsolePrintF("SporeFixOnline: certificate hash: 0x%02X 0x%02X 0x%02X 0x%02X", win32_cert_hash[i], win32_cert_hash[i+1], win32_cert_hash[i+2], win32_cert_hash[i+3]);
+            }
+        }
+
     out:
         if (x509_cert != nullptr)
         {
-            // free certificate
             // X509_free(x509_cert);
             STATIC_CALL(Address(ModAPI::ChooseAddress(0x0117f730, 0x0117cfb0)), void, void*, x509_cert);
         }
         if (cert_ctx != nullptr)
         {
             CertFreeCertificateContext(cert_ctx);
-        }
-        if (chain_ctx != nullptr)
-        {
-            CertFreeCertificateChain(chain_ctx);
         }
 
         // 0 = success
@@ -164,7 +179,7 @@ void AttachDetours()
 	// Call the attach() method on any detours you want to add
 	// For example: cViewer_SetRenderType_detour::attach(GetAddress(cViewer, SetRenderType));
 
-    // TODO: check why it doesn't work with disc spore
+    SSL_CTX_set_verify::attach(Address(ModAPI::ChooseAddress(0x0117e2b0, 0x0117bb30)));
     NetSSLVerifyConnection::attach(Address(ModAPI::ChooseAddress(0x0094f080, 0x0094eb60)));
 }
 
