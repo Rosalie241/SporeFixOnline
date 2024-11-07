@@ -62,6 +62,7 @@ static_detour(NetSSLVerifyConnection, int(void*, char*)) {
         void* x509_cert = STATIC_CALL(Address(ModAPI::ChooseAddress(0x0117db60, 0x0117b3e0)), void*, void*, ssl);
         if (x509_cert == nullptr)
         {
+            App::ConsolePrintF("SporeFixOnline: SSL_get_peer_certificate() failed!");
             goto out;
         }
 
@@ -70,6 +71,7 @@ static_detour(NetSSLVerifyConnection, int(void*, char*)) {
         x509_cert_len = STATIC_CALL(Address(ModAPI::ChooseAddress(0x0117f700, 0x0117cf80)), int, Args(void*, unsigned char**), Args(x509_cert, &x509_cert_buf));
         if (x509_cert_len < 0)
         {
+            App::ConsolePrintF("SporeFixOnline: i2d_X509() failed!");
             goto out;
         }
 
@@ -82,7 +84,8 @@ static_detour(NetSSLVerifyConnection, int(void*, char*)) {
             nullptr);
         if (cert_ctx == nullptr)
         {
-            return 1;
+            App::ConsolePrintF("SporeFixOnline: CertCreateContext() failed!");
+            goto out;
         }
 
         // retrieve hash of PCCERT_CONTEXT
@@ -92,6 +95,7 @@ static_detour(NetSSLVerifyConnection, int(void*, char*)) {
             win32_cert_hash, &win32_cert_hash_len);
         if (!ret)
         {
+            App::ConsolePrintF("SporeFixOnline: CertGetCertificateContextProperty() failed!");
             goto out;
         }
 
