@@ -13,6 +13,14 @@
 #include <Windows.h>
 #include <Spore\BasicIncludes.h>
 
+#include <cstring>
+
+//
+// Local Variables
+//
+
+uint32_t baseAddress = 0x0;
+
 //
 // Helper functions
 //
@@ -33,6 +41,19 @@ static void DisplayError(const char* fmt, ...)
 // Detoured Functions
 //
 
+static hostent* (WINAPI* gethostbyname_real)(const char*) = gethostbyname;
+static hostent* WINAPI gethostbyname_detour(const char* hostname)
+{
+    // why doesnt the override in RegisterHostFromAppProperties_detour() work??
+    // TODO: investigate.....
+    if (std::strcmp(hostname, "ml-latest.spore.rws.ad.ea.com") == 0)
+    {
+        return gethostbyname_real("pollinator.spore.com");
+    }
+
+    return gethostbyname_real(hostname);
+}
+
 static_detour(SSL_CTX_set_verify, void(void*, int, void*))
 {
     void detoured(void* ssl, int mode, void* callback)
@@ -42,6 +63,50 @@ static_detour(SSL_CTX_set_verify, void(void*, int, void*))
         // in NetSSLVerifyConnection anyways
         // TODO: figure out how Spore sets the CA certificates
         return original_function(ssl, 0x00, callback);
+    }
+};
+
+static_detour(RegisterHostFromAppProperties, void(uint32_t, const char*))
+{
+    void detoured(uint32_t id, const char* host)
+    {
+        if (id == 0x5384c3f)
+        {
+            return original_function(id, "pollinator.spore.com");
+        }
+        else if (id == 0x53dd8c2)
+        {
+            return original_function(id, "community.spore.com");
+        }
+        else
+        {
+        }
+
+        return original_function(id, host);
+    }
+};
+
+#include <map>
+#include <string>
+
+static_detour(RegisterURL, void(uint32_t, uint32_t, const char*))
+{
+    void detoured(uint32_t id1, uint32_t id2, const char* url)
+    {
+        const std::map<std::string, std::string> overrideUrlMap =
+        {
+            { "/community/mvj/community_page", "/community/assetBrowser/home" },
+        };
+
+        for (const auto& pair : overrideUrlMap)
+        {
+            if (pair.first == url)
+            {
+                return original_function(id1, id2, pair.second.c_str());
+            }
+        }
+
+        return original_function(id1, id2, url);
     }
 };
 
@@ -59,19 +124,19 @@ static_detour(NetSSLVerifyConnection, int(void*, char*)) {
 
         // retrieve current certificate
         // X509* x509_cert = SSL_get_peer_certificate(ssl);
-        void* x509_cert = STATIC_CALL(Address(ModAPI::ChooseAddress(0x0117db60, 0x0117b3e0)), void*, void*, ssl);
+        void* x509_cert = STATIC_CALL(Address(0x011a05d0), void*, void*, ssl);
         if (x509_cert == nullptr)
         {
-            App::ConsolePrintF("SporeFixOnline: SSL_get_peer_certificate() failed!");
+            DisplayError("SporeFixOnline: SSL_get_peer_certificate() failed!");
             goto out;
         }
 
         // extract encoded x509
         // x509_cert_len = i2d_X509(x509_cert, &x509_cert_buf);
-        x509_cert_len = STATIC_CALL(Address(ModAPI::ChooseAddress(0x0117f700, 0x0117cf80)), int, Args(void*, unsigned char**), Args(x509_cert, &x509_cert_buf));
+        x509_cert_len = STATIC_CALL(Address(0x011a2dc0), int, Args(void*, unsigned char**), Args(x509_cert, &x509_cert_buf));
         if (x509_cert_len < 0)
         {
-            App::ConsolePrintF("SporeFixOnline: i2d_X509() failed!");
+            DisplayError("SporeFixOnline: i2d_X509() failed!");
             goto out;
         }
 
@@ -84,7 +149,7 @@ static_detour(NetSSLVerifyConnection, int(void*, char*)) {
             nullptr);
         if (cert_ctx == nullptr)
         {
-            App::ConsolePrintF("SporeFixOnline: CertCreateContext() failed!");
+            DisplayError("SporeFixOnline: CertCreateContext() failed!");
             goto out;
         }
 
@@ -95,7 +160,7 @@ static_detour(NetSSLVerifyConnection, int(void*, char*)) {
             win32_cert_hash, &win32_cert_hash_len);
         if (!ret)
         {
-            App::ConsolePrintF("SporeFixOnline: CertGetCertificateContextProperty() failed!");
+            DisplayError("SporeFixOnline: CertGetCertificateContextProperty() failed!");
             goto out;
         }
 
@@ -134,18 +199,14 @@ static_detour(NetSSLVerifyConnection, int(void*, char*)) {
 
         if (!ret)
         {
-            App::ConsolePrintF("SporeFixOnline: certificate hash NOT matched!");
-            for (int i = 0; i < 20; i += 4)
-            {
-                App::ConsolePrintF("SporeFixOnline: certificate hash: 0x%02X 0x%02X 0x%02X 0x%02X", win32_cert_hash[i], win32_cert_hash[i+1], win32_cert_hash[i+2], win32_cert_hash[i+3]);
-            }
+            DisplayError("SporeFixOnline: certificate hash NOT matched!");
         }
 
     out:
         if (x509_cert != nullptr)
         {
             // X509_free(x509_cert);
-            STATIC_CALL(Address(ModAPI::ChooseAddress(0x0117f730, 0x0117cfb0)), void, void*, x509_cert);
+            STATIC_CALL(Address(0x011a2df0), void, void*, x509_cert);
         }
         if (cert_ctx != nullptr)
         {
@@ -162,29 +223,22 @@ static_detour(NetSSLVerifyConnection, int(void*, char*)) {
 // Exported Functions
 //
 
-void Initialize()
-{
-	// This method is executed when the game starts, before the user interface is shown
-	// Here you can do things such as:
-	//  - Add new cheats
-	//  - Add new simulator classes
-	//  - Add new game modes
-	//  - Add new space tools
-	//  - Change materials
-}
-
-void Dispose()
-{
-	// This method is called when the game is closing
-}
-
 void AttachDetours()
 { 
-	// Call the attach() method on any detours you want to add
-	// For example: cViewer_SetRenderType_detour::attach(GetAddress(cViewer, SetRenderType));
+    baseAddress = (uint32_t)GetModuleHandle(NULL);
 
-    SSL_CTX_set_verify::attach(Address(ModAPI::ChooseAddress(0x0117e2b0, 0x0117bb30)));
-    NetSSLVerifyConnection::attach(Address(ModAPI::ChooseAddress(0x0094f080, 0x0094eb60)));
+    DetourAttach(&(PVOID&)gethostbyname_real, gethostbyname_detour);
+
+    SSL_CTX_set_verify::attach(Address(0x011a1170));
+    NetSSLVerifyConnection::attach(Address(0x01146ab0));
+    RegisterHostFromAppProperties::attach(Address(0x00da3a00));
+    RegisterURL::attach(Address(0x00da3a60));
+}
+
+// The game calls this function but ignores the result, so just return E_FAIL.
+extern "C" HRESULT WINAPI DirectInput8Create(HINSTANCE, DWORD, REFIID, LPVOID*, LPUNKNOWN)
+{
+    return E_FAIL;
 }
 
 
@@ -197,9 +251,6 @@ BOOL APIENTRY DllMain(HMODULE hModule,
 	switch (ul_reason_for_call)
 	{
 	case DLL_PROCESS_ATTACH:
-		ModAPI::AddPostInitFunction(Initialize);
-		ModAPI::AddDisposeFunction(Dispose);
-
 		PrepareDetours(hModule);
 		AttachDetours();
 		CommitDetours();

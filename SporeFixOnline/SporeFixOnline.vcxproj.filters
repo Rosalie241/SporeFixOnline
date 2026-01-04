@@ -13,10 +13,31 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="Source Files\Detours">
+      <UniqueIdentifier>{eb398c66-42aa-4bab-a5b4-89246af4a5c9}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dllmain.cpp">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Detours\src\creatwth.cpp">
+      <Filter>Source Files\Detours</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Detours\src\detours.cpp">
+      <Filter>Source Files\Detours</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Detours\src\disasm.cpp">
+      <Filter>Source Files\Detours</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Detours\src\disolx86.cpp">
+      <Filter>Source Files\Detours</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Detours\src\image.cpp">
+      <Filter>Source Files\Detours</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Detours\src\modules.cpp">
+      <Filter>Source Files\Detours</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
