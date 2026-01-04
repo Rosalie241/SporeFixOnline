@@ -13,7 +13,8 @@
 #include <Windows.h>
 #include <Spore\BasicIncludes.h>
 
-#include <cstring>
+#include <string>
+#include <map>
 
 //
 // Local Variables
@@ -70,9 +71,6 @@ static_detour(RegisterHostFromAppProperties, void(uint32_t, const char*))
         return original_function(id, host);
     }
 };
-
-#include <map>
-#include <string>
 
 static_detour(RegisterURL, void(uint32_t, uint32_t, const char*))
 {
