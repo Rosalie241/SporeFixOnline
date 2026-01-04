@@ -41,19 +41,6 @@ static void DisplayError(const char* fmt, ...)
 // Detoured Functions
 //
 
-static hostent* (WINAPI* gethostbyname_real)(const char*) = gethostbyname;
-static hostent* WINAPI gethostbyname_detour(const char* hostname)
-{
-    // why doesnt the override in RegisterHostFromAppProperties_detour() work??
-    // TODO: investigate.....
-    if (std::strcmp(hostname, "ml-latest.spore.rws.ad.ea.com") == 0)
-    {
-        return gethostbyname_real("pollinator.spore.com");
-    }
-
-    return gethostbyname_real(hostname);
-}
-
 static_detour(SSL_CTX_set_verify, void(void*, int, void*))
 {
     void detoured(void* ssl, int mode, void* callback)
@@ -72,14 +59,12 @@ static_detour(RegisterHostFromAppProperties, void(uint32_t, const char*))
     {
         if (id == 0x5384c3f)
         {
-            return original_function(id, "pollinator.spore.com");
+            /* hack to override pollinator URL */
+            return original_function(0x5384c40, "pollinator.spore.com");
         }
         else if (id == 0x53dd8c2)
         {
             return original_function(id, "community.spore.com");
-        }
-        else
-        {
         }
 
         return original_function(id, host);
@@ -97,6 +82,10 @@ static_detour(RegisterURL, void(uint32_t, uint32_t, const char*))
         {
             { "/community/mvj/community_page", "/community/assetBrowser/home" },
         };
+
+        /* hack to override pollinator URL */
+        if (id2 == 0x5384c3f)
+            id2 = 0x5384c40;
 
         for (const auto& pair : overrideUrlMap)
         {
@@ -226,8 +215,6 @@ static_detour(NetSSLVerifyConnection, int(void*, char*)) {
 void AttachDetours()
 { 
     baseAddress = (uint32_t)GetModuleHandle(NULL);
-
-    DetourAttach(&(PVOID&)gethostbyname_real, gethostbyname_detour);
 
     SSL_CTX_set_verify::attach(Address(0x011a1170));
     NetSSLVerifyConnection::attach(Address(0x01146ab0));
