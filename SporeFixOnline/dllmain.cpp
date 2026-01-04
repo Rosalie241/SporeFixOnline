@@ -60,7 +60,7 @@ static_detour(RegisterHostFromAppProperties, void(uint32_t, const char*))
     {
         if (id == 0x5384c3f)
         {
-            /* hack to override pollinator URL */
+            // hack to override pollinator URL
             return original_function(0x5384c40, "pollinator.spore.com");
         }
         else if (id == 0x53dd8c2)
@@ -81,7 +81,7 @@ static_detour(RegisterURL, void(uint32_t, uint32_t, const char*))
             { "/community/mvj/community_page", "/community/assetBrowser/home" },
         };
 
-        /* hack to override pollinator URL */
+        // hack to override pollinator URL
         if (id2 == 0x5384c3f)
             id2 = 0x5384c40;
 
