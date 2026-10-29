@@ -30,20 +30,10 @@ static void DisplayError(const char* fmt, ...)
 }
 
 //
-// Detoured Functions
+// Local Variables
 //
 
-class CertStream
-{
-public:
-	int _padding_;
-	char* mpBuffer;
-	uint32_t mnBufSize;
-	uint32_t mnPosition;
-	// cRandomMaxSequence mMaxSequence
-};
-
-static const char certificate[] =
+static const char l_Certificate[] =
 	"-----BEGIN CERTIFICATE-----\n"
 	"MIIEyjCCA7KgAwIBAgIJAKwbv3PJfRclMA0GCSqGSIb3DQEBCwUAMIGeMQswCQYD\n"
 	"VQQGEwJVUzETMBEGA1UECBMKQ2FsaWZvcm5pYTEVMBMGA1UEBxMMUmVkd29vZCBD\n"
@@ -73,18 +63,32 @@ static const char certificate[] =
 	"v6GKCq84T4OWUovHW50/UXE3I5Gx3VExLcRLWaKe\n"
 	"-----END CERTIFICATE-----\n";
 
+//
+// Detoured Functions
+//
+
+class CertStream
+{
+public:
+	int _padding_;
+	char* mpBuffer;
+	uint32_t mnBufSize;
+	uint32_t mnPosition;
+	// cRandomMaxSequence mMaxSequence
+};
+
 member_detour(CertStreamReadDetour, CertStream, int(void* buffer, const int size))
 {
 	int detoured(void* buffer, int size)
 	{
-		if ((this->mnPosition + size) >= sizeof(certificate))
+		if ((this->mnPosition + size) >= sizeof(l_Certificate))
 		{
 			return -1;
 		}
 
 		for (int i = 0; i < size; i++)
 		{
-			((char*)buffer)[i] = certificate[this->mnPosition++];
+			((char*)buffer)[i] = l_Certificate[this->mnPosition++];
 		}
 
 		return size;
