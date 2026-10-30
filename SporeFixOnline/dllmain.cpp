@@ -12,6 +12,7 @@
 #define _CRT_SECURE_NO_WARNINGS
 #include <Windows.h>
 #include <Spore\BasicIncludes.h>
+#include <Spore\SSL\CertStream.h>
 
 //
 // Helper functions
@@ -67,31 +68,21 @@ static const char l_Certificate[] =
 // Detoured Functions
 //
 
-class CertStream
+member_detour(CertStreamReadDetour, SSL::CertStream, int(void* pData, size_t nSize))
 {
-public:
-	int _padding_;
-	char* mpBuffer;
-	uint32_t mnBufSize;
-	uint32_t mnPosition;
-	// cRandomMaxSequence mMaxSequence
-};
-
-member_detour(CertStreamReadDetour, CertStream, int(void* buffer, const int size))
-{
-	int detoured(void* buffer, int size)
+	int detoured(void* pData, size_t size)
 	{
 		if ((this->mnPosition + size) >= sizeof(l_Certificate))
 		{
 			return -1;
 		}
 
-		for (int i = 0; i < size; i++)
+		for (size_t i = 0; i < size; i++)
 		{
-			((char*)buffer)[i] = l_Certificate[this->mnPosition++];
+			((char*)pData)[i] = l_Certificate[this->mnPosition++];
 		}
 
-		return size;
+		return (int)size;
 	}
 };
 
@@ -101,7 +92,7 @@ member_detour(CertStreamReadDetour, CertStream, int(void* buffer, const int size
 
 void AttachDetours()
 { 
-	CertStreamReadDetour::attach(Address(ModAPI::ChooseAddress(0x007c8040, 0x007c79b0)));
+	CertStreamReadDetour::attach(GetAddress(SSL::CertStream, Read));
 }
 
 
