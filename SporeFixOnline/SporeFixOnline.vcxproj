@@ -83,9 +83,12 @@
       <EnableUAC>false</EnableUAC>
     </Link>
     <PreBuildEvent>
-      <Command>if NOT EXIST "$(SporeSdkPath)dll\$(Configuration)\SporeModAPI.lib" (
+      <Command>if not exist "$(SporeSdkPath)lib\$(Configuration)\SporeModAPIBase.lib" (
     msbuild "$(SporeSdkPath)Spore ModAPI" /p:Configuration=$(Configuration) /p:Platform=Win32 /p:SDK_BUILD_VER=180 /p:EXECUTABLE_TYPE=0 /m
-    msbuild "$(SporeSdkPath)Spore ModAPI" /t:BuildDlls /p:BuildVer=180 /p:Config=$(Configuration) /p:Platform=$(Platform) /m
+)
+
+if not exist "$(SporeSdkPath)dll\$(Configuration)\SporeModAPI.lib" (
+    msbuild "$(SporeSdkPath)Spore ModAPI" /t:BuildDlls /p:BuildVer=280 /p:Config=$(Configuration) /p:Platform=$(Platform) /m
 )</Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
@@ -110,9 +113,12 @@
       <EnableUAC>false</EnableUAC>
     </Link>
     <PreBuildEvent>
-      <Command>if NOT EXIST "$(SporeSdkPath)dll\$(Configuration)\SporeModAPI.lib" (
+      <Command>if not exist "$(SporeSdkPath)lib\$(Configuration)\SporeModAPIBase.lib" (
     msbuild "$(SporeSdkPath)Spore ModAPI" /p:Configuration=$(Configuration) /p:Platform=Win32 /p:SDK_BUILD_VER=180 /p:EXECUTABLE_TYPE=0 /m
-    msbuild "$(SporeSdkPath)Spore ModAPI" /t:BuildDlls /p:BuildVer=180 /p:Config=$(Configuration) /p:Platform=$(Platform) /m
+)
+
+if not exist "$(SporeSdkPath)dll\$(Configuration)\SporeModAPI.lib" (
+    msbuild "$(SporeSdkPath)Spore ModAPI" /t:BuildDlls /p:BuildVer=280 /p:Config=$(Configuration) /p:Platform=$(Platform) /m
 )</Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
